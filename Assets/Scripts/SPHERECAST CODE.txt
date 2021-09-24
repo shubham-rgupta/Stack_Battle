@@ -1,0 +1,111 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+public class Bot1 : MonoBehaviour
+{
+    public GameObject parentObj;
+    public float moveSpeed;
+    Rigidbody rb;
+    private Vector3 moveDirection;
+    public GameObject baseCube;
+    public GameObject greenCubePrefab;
+
+    private List<GameObject> cubeList = new List<GameObject>();
+    private int index = 0;
+
+    //Inner Raycast for cubes 
+    public GameObject hitObject;
+    public float radius;//
+    public float distance;//
+    public float maxDistance;//
+    public Vector3 origin; //
+    public Vector3 direction;//
+
+    private bool cubeHit =false ;
+
+
+    void Start()
+    {
+        rb = GetComponent<Rigidbody>();
+        cubeList.Add(baseCube);
+        ChangeDirection();
+    }
+
+
+    void Update()
+    {
+
+        if (!cubeHit)
+        {
+            transform.position += moveSpeed * Time.deltaTime * moveDirection;
+            transform.rotation = Quaternion.LookRotation(moveDirection);
+        }
+         
+
+        origin = transform.position; // + GetComponent<SphereCollider>().center
+        direction = transform.forward;
+        RaycastHit innerRay;
+        if (Physics.SphereCast(origin, radius, direction, out innerRay, maxDistance, LayerMask.GetMask("Colorless"),QueryTriggerInteraction.UseGlobal))
+        {
+            cubeHit = true;
+            Debug.Log("COLORLESS");
+            hitObject = innerRay.transform.gameObject;
+            distance = innerRay.distance;
+            Vector3 tempPos = hitObject.transform.position;
+            //Vector3 tempPos = hitObject.transform.position - transform.position;
+            while (distance > 0)
+            {
+                transform.position = Vector3.MoveTowards(transform.position, tempPos, moveSpeed * Time.deltaTime);
+                distance -= 1;
+            }
+            
+            //ChangeDirection();
+        }
+
+        else
+        {
+            distance = maxDistance;
+            hitObject = null;
+        }
+        //if (Physics.SphereCast(innerCastOrigin, innerCastRadius, innerCastDirection, out innerRay, innerMaxDistance, LayerMask.GetMask("Wall")))
+        //{
+        //    Debug.Log("WALL");
+        //    ChangeDirection();
+        //}
+
+
+    }
+    private void ChangeDirection()
+    {
+        moveDirection = new Vector3(Random.Range(-1f, 1f), 0f, Random.Range(-1f, 1f));
+        
+    }
+    private void OnCollisionEnter(Collision other)
+    {
+        if(other.gameObject.tag == "Wall")
+        {
+
+            ChangeDirection();
+        }
+        if (other.gameObject.tag == "Colorless")
+        {
+            Destroy(other.gameObject);
+            transform.position = new Vector3(0, 1f, 0) * 1;
+            cubeList.Add(Instantiate(greenCubePrefab, cubeList[index].transform.position + new Vector3
+                    (0, -0.2f, 0), baseCube.transform.rotation));
+            
+            //rb.AddForce(new Vector3(0, 1.5f, 0) * 5, ForceMode.Impulse);
+            index++;
+            cubeList[index].transform.SetParent(parentObj.transform);
+            //ChangeDirection();
+
+        }
+    }
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.red;
+        Debug.DrawLine(origin, origin + direction * distance);
+        Gizmos.DrawWireSphere(origin + direction * distance, radius);
+    }
+}
